@@ -212,13 +212,17 @@ function distanceMiles(lat1, lng1, lat2, lng2) {
 // Only offers a slot if a technician is already working within NEARBY_MILES that day.
 const NEARBY_MILES = 5;
 
+// Always format dates in LOCAL time to avoid BST/UTC off-by-one
+function localDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 async function fetchAvailability(jobLat, jobLng) {
   const today = new Date();
   const from  = new Date(today); from.setDate(today.getDate() + 1);
   const to    = new Date(today); to.setDate(today.getDate() + DAYS_AHEAD + 2);
-  const toDateStr = d => d.toISOString().slice(0, 10);
-  const fromStr   = toDateStr(from);
-  const toStr     = toDateStr(to);
+  const fromStr = localDateStr(from);
+  const toStr   = localDateStr(to);
 
   // Fetch activities + job coordinates in parallel
   const [activities, jobCoords] = await Promise.all([
@@ -273,7 +277,7 @@ async function fetchAvailability(jobLat, jobLng) {
   const d = new Date(from);
   while (d <= to) {
     if (d.getDay() !== 0 && d.getDay() !== 6) {
-      const key      = toDateStr(d);
+      const key      = localDateStr(d);
       const staffDay = byDate[key] || {};
       let amFree = false, pmFree = false;
 
@@ -471,7 +475,7 @@ function StepSelectSlot({ job, onConfirm, onBack }) {
   const availDays = availability
     ? Object.entries(availability)
         .filter(([, v]) => v.am || v.pm)
-        .map(([k]) => new Date(k + 'T00:00:00'))
+        .map(([k]) => { const [y,m,d] = k.split('-'); return new Date(+y, +m-1, +d); })
         .sort((a, b) => a - b)
     : [];
 
@@ -482,7 +486,7 @@ function StepSelectSlot({ job, onConfirm, onBack }) {
 
   function slotsForDay(day) {
     if (!availability) return [];
-    const key = day.toISOString().slice(0, 10);
+    const key = localDateStr(day);
     const avail = availability[key] || {};
     const slots = [];
     if (avail.am) slots.push({ label: 'Morning  08:00–13:00', start: '08:00', end: '13:00', period: 'AM' });
