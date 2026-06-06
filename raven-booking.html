@@ -166,22 +166,36 @@ function statusBadgeClass(status) {
   return 'badge-pending';
 }
 
-// Fetch real availability from ServiceM8 diary
-// Returns: { 'YYYY-MM-DD': { am: bool, pm: bool }, ... }
-async function fetchAvailability() {
+// Haversine distance between two lat/lng points in miles
+function distanceMiles(lat1, lng1, lat2, lng2) {
+  const R    = 3958.8;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a    = Math.sin(dLat / 2) ** 2
+             + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+             * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Fetch real availability from ServiceM8 diary.
+// jobLat / jobLng — the customer's property coordinates.
+// Only offers a slot if a technician is already working within NEARBY_MILES that day.
+const NEARBY_MILES = 5;
+
+async function fetchAvailability(jobLat, jobLng) {
   const today = new Date();
   const from  = new Date(today); from.setDate(today.getDate() + 1);
   const to    = new Date(today); to.setDate(today.getDate() + DAYS_AHEAD + 2);
-
   const toDateStr = d => d.toISOString().slice(0, 10);
-  const fromStr = toDateStr(from);
-  const toStr   = toDateStr(to);
+  const fromStr   = toDateStr(from);
+  const toStr     = toDateStr(to);
 
-  const activities = await sm8Get(
-    `/jobactivity.json?%24filter=start_date+gt+%27${fromStr}%27+and+start_date+lt+%27${toStr}%27+and+active+eq+1`
-  );
+  // Fetch activities + job coordinates in parallel
+  const [activities, jobCoords] = await Promise.all([
+    sm8Get(`/jobactivity.json?%24filter=start_date+gt+%27${fromStr}%27+and+start_date+lt+%27${toStr}%27+and+active+eq+1`),
+    fetch(PROXY_BASE + '/job-coords').then(r => r.json()),
+  ]);
 
-  // Filter to Raven staff, scheduled (not GPS-recorded) only
   const staffSet = new Set(RAVEN_STAFF);
   const relevant = activities.filter(a =>
     staffSet.has(a.staff_uuid) &&
@@ -189,34 +203,58 @@ async function fetchAvailability() {
     !a.activity_was_recorded
   );
 
-  // For each date, track booked hours per staff per half-day
-  // AM window: 08:00–13:00 (5h), PM window: 13:00–17:30 (4.5h)
-  const byDate = {};
+  // For each date+staff: track booked hours AND whether they're working nearby
+  // AM: 08:00–13:00  |  PM: 13:00–17:30
+  const byDate = {}; // { date: { staffUuid: { am: hrs, pm: hrs, amNearby: bool, pmNearby: bool } } }
+
   for (const a of relevant) {
     const date  = a.start_date.slice(0, 10);
     const staff = a.staff_uuid;
-    if (!byDate[date]) byDate[date] = {};
-    if (!byDate[date][staff]) byDate[date][staff] = { am: 0, pm: 0 };
+    if (!byDate[date])        byDate[date]        = {};
+    if (!byDate[date][staff]) byDate[date][staff] = { am: 0, pm: 0, amNearby: false, pmNearby: false };
 
-    const s = new Date(a.start_date.replace(' ', 'T'));
-    const e = new Date(a.end_date.replace(' ', 'T'));
+    const s   = new Date(a.start_date.replace(' ', 'T'));
+    const e   = new Date(a.end_date.replace(' ', 'T'));
     const hrs = (e - s) / 3600000;
-    if (s.getHours() < 13) byDate[date][staff].am += hrs;
-    else                    byDate[date][staff].pm += hrs;
+    const pm  = s.getHours() >= 13;
+
+    if (pm) byDate[date][staff].pm += hrs;
+    else    byDate[date][staff].am += hrs;
+
+    // Check proximity of the job this activity is for
+    if (jobLat && jobLng) {
+      const coords = jobCoords[a.job_uuid];
+      if (coords) {
+        const miles = distanceMiles(jobLat, jobLng, coords.lat, coords.lng);
+        if (miles <= NEARBY_MILES) {
+          if (pm) byDate[date][staff].pmNearby = true;
+          else    byDate[date][staff].amNearby = true;
+        }
+      }
+    }
   }
 
-  // A slot is available if at least one technician is under the busy threshold
+  // A slot is available if at least one technician is:
+  //   a) under the busy threshold (has capacity), AND
+  //   b) already working within 5 miles that half-day (or job has no coords — fallback)
+  const hasCoordsForJob = jobLat && jobLng;
+
   const availability = {};
   const d = new Date(from);
   while (d <= to) {
-    if (d.getDay() !== 0 && d.getDay() !== 6) { // skip weekends
-      const key = toDateStr(d);
+    if (d.getDay() !== 0 && d.getDay() !== 6) {
+      const key      = toDateStr(d);
       const staffDay = byDate[key] || {};
       let amFree = false, pmFree = false;
+
       for (const staffId of RAVEN_STAFF) {
-        const booked = staffDay[staffId] || { am: 0, pm: 0 };
-        if (booked.am < SLOT_BUSY_THRESHOLD_H) amFree = true;
-        if (booked.pm < SLOT_BUSY_THRESHOLD_H) pmFree = true;
+        const s = staffDay[staffId] || { am: 0, pm: 0, amNearby: false, pmNearby: false };
+        const amCapacity = s.am < SLOT_BUSY_THRESHOLD_H;
+        const pmCapacity = s.pm < SLOT_BUSY_THRESHOLD_H;
+        const amNear     = !hasCoordsForJob || s.amNearby;
+        const pmNear     = !hasCoordsForJob || s.pmNearby;
+        if (amCapacity && amNear) amFree = true;
+        if (pmCapacity && pmNear) pmFree = true;
       }
       availability[key] = { am: amFree, pm: pmFree };
     }
@@ -430,7 +468,7 @@ function StepSelectSlot({ job, onConfirm, onBack }) {
   const [selectedSlot,  setSelectedSlot]  = useState(null);
 
   useEffect(() => {
-    fetchAvailability()
+    fetchAvailability(job.lat ? parseFloat(job.lat) : null, job.lng ? parseFloat(job.lng) : null)
       .then(setAvailability)
       .catch(e => { console.error(e); setError('Could not load available slots. Please try again.'); });
   }, []);
