@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Raven — Book Your Appointment</title>
+  <title>Integrum Services — Book Your Appointment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -11,61 +13,91 @@
   <script>
     tailwind.config = {
       theme: { extend: { colors: {
-        raven: {
-          dark:   '#0d0d0d',
-          card:   '#1a1a1a',
-          border: '#2a2a2a',
-          accent: '#e8b84b',
-          muted:  '#6b6b6b',
+        ig: {
+          red:    '#cc0000',
+          redhov: '#aa0000',
+          black:  '#111111',
+          card:   '#1c1c1c',
+          border: '#2e2e2e',
+          muted:  '#888888',
         }
-      }}}
+      }, fontFamily: { barlow: ['Barlow', 'system-ui', 'sans-serif'] } }}
     }
   </script>
   <style>
-    body { background: #0d0d0d; font-family: 'Segoe UI', system-ui, sans-serif; color: #f0f0f0; }
-    .card { background: #1a1a1a; border: 1px solid #2a2a2a; }
+    *, body { font-family: 'Barlow', system-ui, sans-serif; }
+    body { background: #111111; color: #f0f0f0; }
+
+    /* Header red bar accent */
+    .header-bar { background: #cc0000; height: 4px; }
+
+    .card { background: #1c1c1c; border: 1px solid #2e2e2e; }
+
     .input-field {
-      background: #111; border: 1px solid #333; color: #f0f0f0;
-      border-radius: 0.5rem; padding: 0.75rem 1rem; width: 100%;
-      transition: border-color 0.15s;
+      background: #151515; border: 1px solid #333; color: #f0f0f0;
+      border-radius: 0.375rem; padding: 0.75rem 1rem; width: 100%;
+      transition: border-color 0.15s; font-size: 0.95rem;
     }
-    .input-field:focus { outline: none; border-color: #e8b84b; }
+    .input-field:focus { outline: none; border-color: #cc0000; box-shadow: 0 0 0 2px rgba(204,0,0,0.15); }
+    .input-field::placeholder { color: #555; }
+
     .btn-primary {
-      background: #e8b84b; color: #0d0d0d; font-weight: 700;
-      border-radius: 0.5rem; padding: 0.75rem 2rem; cursor: pointer;
-      border: none; transition: opacity 0.15s;
+      background: #cc0000; color: #fff; font-weight: 700; letter-spacing: 0.03em;
+      border-radius: 0.375rem; padding: 0.8rem 2rem; cursor: pointer;
+      border: none; transition: background 0.15s; font-size: 0.95rem; text-transform: uppercase;
     }
-    .btn-primary:hover { opacity: 0.88; }
-    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-secondary {
-      background: #2a2a2a; color: #f0f0f0; font-weight: 600;
-      border-radius: 0.5rem; padding: 0.75rem 1.5rem; cursor: pointer;
-      border: 1px solid #3a3a3a; transition: background 0.15s;
+    .btn-primary:hover { background: #aa0000; }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-outline {
+      background: transparent; color: #fff; font-weight: 600;
+      border-radius: 0.375rem; padding: 0.8rem 1.5rem; cursor: pointer;
+      border: 1px solid #cc0000; transition: background 0.15s; font-size: 0.9rem;
     }
-    .btn-secondary:hover { background: #333; }
+    .btn-outline:hover { background: rgba(204,0,0,0.1); }
+
+    .tab-btn {
+      flex: 1; padding: 0.6rem 1rem; font-weight: 600; font-size: 0.875rem;
+      border-radius: 0.25rem; transition: all 0.15s; border: 1px solid transparent;
+      cursor: pointer; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .tab-active   { background: #cc0000; color: #fff; border-color: #cc0000; }
+    .tab-inactive { background: transparent; color: #888; border-color: #333; }
+    .tab-inactive:hover { color: #fff; border-color: #555; }
+
     .slot-card {
-      background: #111; border: 1px solid #2a2a2a; border-radius: 0.75rem;
+      background: #151515; border: 1px solid #2e2e2e; border-radius: 0.5rem;
       padding: 1rem 1.25rem; cursor: pointer; transition: border-color 0.15s, background 0.15s;
     }
-    .slot-card:hover { border-color: #e8b84b; background: #181808; }
-    .slot-card.selected { border-color: #e8b84b; background: #1c1800; }
-    .badge-status {
-      display: inline-block; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;
-      padding: 0.2rem 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
-    }
-    .badge-pending   { background: #1f2d1f; color: #4ade80; border: 1px solid #166534; }
-    .badge-scheduled { background: #1f1f2d; color: #818cf8; border: 1px solid #3730a3; }
-    .badge-completed { background: #2d2d2d; color: #9ca3af; border: 1px solid #4b5563; }
-    .badge-cancelled { background: #2d1f1f; color: #f87171; border: 1px solid #991b1b; }
-    ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+    .slot-card:hover   { border-color: #cc0000; background: #1a0a0a; }
+    .slot-card.selected { border-color: #cc0000; background: #200000; }
 
-    /* ⚠️  SECURITY NOTE
-       This file calls the ServiceM8 API directly from the browser.
-       The API key below is visible in page source to anyone who opens DevTools.
-       For a public customer portal, route all API calls through a serverless
-       function (Cloudflare Worker, Netlify Function, etc.) that holds the key
-       server-side.  This is fine for internal / controlled-access use.
-    */
+    .badge-status {
+      display: inline-block; border-radius: 0.25rem; font-size: 0.7rem; font-weight: 700;
+      padding: 0.2rem 0.6rem; text-transform: uppercase; letter-spacing: 0.07em;
+    }
+    .badge-pending   { background: #0d2010; color: #4ade80; border: 1px solid #166534; }
+    .badge-scheduled { background: #0d1030; color: #818cf8; border: 1px solid #3730a3; }
+    .badge-completed { background: #222; color: #888; border: 1px solid #444; }
+    .badge-cancelled { background: #200000; color: #f87171; border: 1px solid #7f1d1d; }
+
+    .step-dot { width: 10px; height: 10px; border-radius: 50%; transition: background 0.2s; }
+    .step-dot.done    { background: #cc0000; }
+    .step-dot.active  { background: #ff3333; box-shadow: 0 0 0 3px rgba(204,0,0,0.25); }
+    .step-dot.pending { background: #333; }
+    .step-line { height: 2px; width: 2rem; background: #2e2e2e; }
+
+    .success-icon {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: #cc0000; display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.5rem; font-size: 2rem;
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+    /* Logo mark SVG */
+    .logo-mark { display: inline-flex; align-items: center; gap: 0.5rem; }
   </style>
 </head>
 <body>
@@ -308,62 +340,38 @@ function StepLookup({ onFound }) {
   }
 
   return (
-    <div className="card rounded-2xl p-8 w-full max-w-md mx-auto shadow-xl">
-      <h2 className="text-xl font-bold mb-1">Find your appointment</h2>
-      <p className="text-sm text-gray-400 mb-6">Enter your address details or phone number to look up your job.</p>
+    <div className="card rounded-xl p-8 w-full max-w-md mx-auto shadow-2xl">
+      <div className="flex items-center gap-2 mb-1">
+        <div className="w-1 h-6 bg-ig-red rounded-full"></div>
+        <h2 className="text-xl font-bold tracking-tight">Find your appointment</h2>
+      </div>
+      <p className="text-sm text-ig-muted mb-6 pl-3">Enter your address details or phone number to look up your job.</p>
 
       <div className="flex gap-2 mb-6">
-        <button
-          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${mode === 'address' ? 'bg-raven-accent text-black' : 'bg-raven-border text-gray-300 hover:bg-gray-700'}`}
-          onClick={() => setMode('address')}
-        >Address</button>
-        <button
-          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${mode === 'phone' ? 'bg-raven-accent text-black' : 'bg-raven-border text-gray-300 hover:bg-gray-700'}`}
-          onClick={() => setMode('phone')}
-        >Phone number</button>
+        <button className={`tab-btn ${mode === 'address' ? 'tab-active' : 'tab-inactive'}`} onClick={() => setMode('address')}>Address</button>
+        <button className={`tab-btn ${mode === 'phone'   ? 'tab-active' : 'tab-inactive'}`} onClick={() => setMode('phone')}>Phone number</button>
       </div>
 
       <form onSubmit={handleSearch}>
         {mode === 'address' ? (
           <>
             <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-1">House number / name</label>
-              <input
-                className="input-field"
-                placeholder="e.g. 14 or Rose Cottage"
-                value={houseNo}
-                onChange={e => setHouseNo(e.target.value)}
-                required
-              />
+              <label className="block text-xs font-semibold text-ig-muted uppercase tracking-wider mb-1.5">House number / name</label>
+              <input className="input-field" placeholder="e.g. 14 or Rose Cottage" value={houseNo} onChange={e => setHouseNo(e.target.value)} required />
             </div>
             <div className="mb-6">
-              <label className="block text-sm text-gray-400 mb-1">Postcode</label>
-              <input
-                className="input-field"
-                placeholder="e.g. PO19 1AB"
-                value={postcode}
-                onChange={e => setPostcode(e.target.value)}
-                required
-              />
+              <label className="block text-xs font-semibold text-ig-muted uppercase tracking-wider mb-1.5">Postcode</label>
+              <input className="input-field" placeholder="e.g. RH1 1AB" value={postcode} onChange={e => setPostcode(e.target.value)} required />
             </div>
           </>
         ) : (
           <div className="mb-6">
-            <label className="block text-sm text-gray-400 mb-1">Phone number</label>
-            <input
-              className="input-field"
-              type="tel"
-              placeholder="e.g. 07700 900123"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              required
-            />
+            <label className="block text-xs font-semibold text-ig-muted uppercase tracking-wider mb-1.5">Phone number</label>
+            <input className="input-field" type="tel" placeholder="e.g. 07700 900123" value={phone} onChange={e => setPhone(e.target.value)} required />
           </div>
         )}
 
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-950 border border-red-800 text-red-300 text-sm">{error}</div>
-        )}
+        {error && <div className="mb-4 p-3 rounded bg-red-950 border border-red-800 text-red-300 text-sm">{error}</div>}
 
         <button className="btn-primary w-full" type="submit" disabled={loading}>
           {loading ? 'Searching…' : 'Find my appointment'}
@@ -375,30 +383,23 @@ function StepLookup({ onFound }) {
 
 function StepSelectJob({ jobs, onSelect, onBack }) {
   return (
-    <div className="card rounded-2xl p-8 w-full max-w-lg mx-auto shadow-xl">
-      <button className="text-sm text-gray-500 hover:text-gray-300 mb-4 flex items-center gap-1" onClick={onBack}>
-        ← Back
-      </button>
-      <h2 className="text-xl font-bold mb-1">We found {jobs.length} job{jobs.length > 1 ? 's' : ''}</h2>
-      <p className="text-sm text-gray-400 mb-5">Select the appointment you'd like to book.</p>
+    <div className="card rounded-xl p-8 w-full max-w-lg mx-auto shadow-2xl">
+      <button className="text-xs font-semibold text-ig-muted hover:text-white mb-5 flex items-center gap-1 uppercase tracking-wider" onClick={onBack}>← Back</button>
+      <div className="flex items-center gap-2 mb-1">
+        <div className="w-1 h-6 bg-ig-red rounded-full"></div>
+        <h2 className="text-xl font-bold tracking-tight">We found {jobs.length} job{jobs.length > 1 ? 's' : ''}</h2>
+      </div>
+      <p className="text-sm text-ig-muted mb-5 pl-3">Select the appointment you'd like to book.</p>
       <div className="space-y-3">
         {jobs.map(job => (
-          <button
-            key={job.uuid}
-            className="w-full text-left slot-card"
-            onClick={() => onSelect(job)}
-          >
+          <button key={job.uuid} className="w-full text-left slot-card" onClick={() => onSelect(job)}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-semibold text-sm truncate">{job.job_address || 'No address'}</p>
-                <p className="text-xs text-gray-400 mt-0.5 truncate">{job.type || job.job_description || 'Job #' + job.generated_job_id}</p>
-                {job.start_date && (
-                  <p className="text-xs text-gray-500 mt-1">Current date: {new Date(job.start_date).toLocaleDateString('en-GB')}</p>
-                )}
+                <p className="font-bold text-sm truncate">{job.job_address || 'No address'}</p>
+                <p className="text-xs text-ig-muted mt-0.5 truncate">{job.type || job.job_description || 'Job #' + job.generated_job_id}</p>
+                {job.start_date && <p className="text-xs text-ig-muted mt-1">Ref: {job.generated_job_id}</p>}
               </div>
-              <span className={`badge-status flex-shrink-0 ${statusBadgeClass(job.status)}`}>
-                {statusLabel(job.status)}
-              </span>
+              <span className={`badge-status flex-shrink-0 ${statusBadgeClass(job.status)}`}>{statusLabel(job.status)}</span>
             </div>
           </button>
         ))}
@@ -410,37 +411,33 @@ function StepSelectJob({ jobs, onSelect, onBack }) {
 function StepJobDetail({ job, onBook, onBack }) {
   const canBook = job.status === 'Work Order' || job.status === 'Quote';
   return (
-    <div className="card rounded-2xl p-8 w-full max-w-lg mx-auto shadow-xl">
-      <button className="text-sm text-gray-500 hover:text-gray-300 mb-4 flex items-center gap-1" onClick={onBack}>
-        ← Back
-      </button>
-      <div className="flex items-start justify-between gap-3 mb-5">
-        <h2 className="text-xl font-bold leading-tight">Your appointment</h2>
-        <span className={`badge-status flex-shrink-0 ${statusBadgeClass(job.status)}`}>
-          {statusLabel(job.status)}
-        </span>
+    <div className="card rounded-xl p-8 w-full max-w-lg mx-auto shadow-2xl">
+      <button className="text-xs font-semibold text-ig-muted hover:text-white mb-5 flex items-center gap-1 uppercase tracking-wider" onClick={onBack}>← Back</button>
+      <div className="flex items-start justify-between gap-3 mb-6">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-6 bg-ig-red rounded-full flex-shrink-0"></div>
+          <h2 className="text-xl font-bold tracking-tight">Your appointment</h2>
+        </div>
+        <span className={`badge-status flex-shrink-0 ${statusBadgeClass(job.status)}`}>{statusLabel(job.status)}</span>
       </div>
 
-      <dl className="space-y-3 text-sm mb-6">
-        <Row label="Address"    value={job.job_address || '—'} />
-        <Row label="Job type"   value={job.type || job.job_description || '—'} />
-        <Row label="Reference"  value={job.generated_job_id || job.uuid?.slice(0,8) || '—'} />
-        {job.start_date && (
-          <Row label="Current date" value={new Date(job.start_date).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })} />
-        )}
+      <div className="bg-black bg-opacity-40 rounded-lg p-4 mb-6 space-y-3">
+        <Row label="Address"   value={job.job_address || '—'} />
+        <Row label="Job type"  value={job.type || job.job_description || '—'} />
+        <Row label="Reference" value={job.generated_job_id || job.uuid?.slice(0,8) || '—'} />
+        {job.start_date && <Row label="Current date" value={new Date(job.start_date).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })} />}
         {job.start_time && <Row label="Time" value={job.start_time} />}
-        {job.staff_assigned_to_uuid && <Row label="Technician" value="Assigned — see confirmation" />}
-      </dl>
+      </div>
 
       {canBook ? (
         <>
-          <p className="text-sm text-gray-400 mb-4">Choose a convenient time slot below and we'll confirm your appointment.</p>
+          <p className="text-sm text-ig-muted mb-4">Select an available time slot and we'll get your appointment booked in.</p>
           <button className="btn-primary w-full" onClick={onBook}>Choose a time slot →</button>
         </>
       ) : (
-        <div className="p-3 rounded-lg bg-gray-900 border border-gray-700 text-gray-400 text-sm">
-          This appointment is {statusLabel(job.status).toLowerCase()} and cannot be rescheduled online.
-          Please call us if you need to make changes.
+        <div className="p-3 rounded bg-zinc-900 border border-zinc-700 text-zinc-400 text-sm">
+          This appointment is {statusLabel(job.status).toLowerCase()} and cannot be changed online.
+          Please call us on <strong className="text-white">0808 109 8016</strong> if you need to make changes.
         </div>
       )}
     </div>
@@ -449,9 +446,9 @@ function StepJobDetail({ job, onBook, onBack }) {
 
 function Row({ label, value }) {
   return (
-    <div className="flex gap-3">
-      <dt className="text-gray-500 w-28 flex-shrink-0">{label}</dt>
-      <dd className="text-gray-100">{value}</dd>
+    <div className="flex gap-3 text-sm">
+      <dt className="text-ig-muted w-28 flex-shrink-0 font-medium">{label}</dt>
+      <dd className="text-white font-semibold">{value}</dd>
     </div>
   );
 }
@@ -491,20 +488,19 @@ function StepSelectSlot({ job, onConfirm, onBack }) {
   }
 
   return (
-    <div className="card rounded-2xl p-8 w-full max-w-2xl mx-auto shadow-xl">
-      <button className="text-sm text-gray-500 hover:text-gray-300 mb-4 flex items-center gap-1" onClick={onBack}>
-        ← Back
-      </button>
-      <h2 className="text-xl font-bold mb-1">Choose a time slot</h2>
-      <p className="text-sm text-gray-400 mb-6">Showing real availability from our engineers' diaries.</p>
+    <div className="card rounded-xl p-8 w-full max-w-2xl mx-auto shadow-2xl">
+      <button className="text-xs font-semibold text-ig-muted hover:text-white mb-5 flex items-center gap-1 uppercase tracking-wider" onClick={onBack}>← Back</button>
+      <div className="flex items-center gap-2 mb-1">
+        <div className="w-1 h-6 bg-ig-red rounded-full"></div>
+        <h2 className="text-xl font-bold tracking-tight">Choose a time slot</h2>
+      </div>
+      <p className="text-sm text-ig-muted mb-6 pl-3">Live availability based on your engineer's diary.</p>
 
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-red-950 border border-red-800 text-red-300 text-sm">{error}</div>
-      )}
+      {error && <div className="mb-4 p-3 rounded bg-red-950 border border-red-800 text-red-300 text-sm">{error}</div>}
 
       {!availability && !error && (
-        <div className="flex items-center gap-3 text-gray-500 text-sm py-8 justify-center">
-          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+        <div className="flex items-center gap-3 text-ig-muted text-sm py-10 justify-center">
+          <svg className="animate-spin h-5 w-5 text-ig-red" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
           </svg>
@@ -512,47 +508,40 @@ function StepSelectSlot({ job, onConfirm, onBack }) {
         </div>
       )}
 
-      {/* Day picker */}
       {availDays.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6">
-          {availDays.map((d, i) => {
-            const active = selectedDay && d.toDateString() === selectedDay.toDateString();
-            return (
-              <button
-                key={i}
-                className={`slot-card text-center py-3 px-1 ${active ? 'selected' : ''}`}
-                onClick={() => handleDayClick(d)}
-              >
-                <div className="text-xs text-gray-500">{d.toLocaleDateString('en-GB', { weekday:'short' })}</div>
-                <div className="font-bold text-lg leading-tight">{d.getDate()}</div>
-                <div className="text-xs text-gray-400">{d.toLocaleDateString('en-GB', { month:'short' })}</div>
-              </button>
-            );
-          })}
-        </div>
+        <>
+          <p className="text-xs font-semibold text-ig-muted uppercase tracking-wider mb-3">Select a date</p>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6">
+            {availDays.map((d, i) => {
+              const active = selectedDay && d.toDateString() === selectedDay.toDateString();
+              return (
+                <button key={i} className={`slot-card text-center py-3 px-1 ${active ? 'selected' : ''}`} onClick={() => handleDayClick(d)}>
+                  <div className="text-xs text-ig-muted font-semibold uppercase">{d.toLocaleDateString('en-GB', { weekday:'short' })}</div>
+                  <div className="font-extrabold text-xl leading-tight mt-0.5">{d.getDate()}</div>
+                  <div className="text-xs text-ig-muted">{d.toLocaleDateString('en-GB', { month:'short' })}</div>
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {availability && availDays.length === 0 && (
-        <div className="p-4 rounded-lg bg-gray-900 border border-gray-700 text-gray-400 text-sm">
-          No available slots found in the next {DAYS_AHEAD} days. Please call us to arrange an appointment.
+        <div className="p-4 rounded bg-zinc-900 border border-zinc-700 text-zinc-400 text-sm">
+          No available slots in the next {DAYS_AHEAD} days. Call us on <strong className="text-white">0808 109 8016</strong> to arrange an appointment.
         </div>
       )}
 
-      {/* Slot picker */}
       {selectedDay && (
         <>
-          <p className="text-sm text-gray-400 mb-3">Available slots for {fmtShort(selectedDay)}:</p>
+          <p className="text-xs font-semibold text-ig-muted uppercase tracking-wider mb-3">Select a time — {fmtShort(selectedDay)}</p>
           <div className="grid grid-cols-2 gap-3 mb-6">
             {slotsForDay(selectedDay).map((slot, i) => {
               const active = selectedSlot && selectedSlot.period === slot.period;
               return (
-                <button
-                  key={i}
-                  className={`slot-card text-center py-4 ${active ? 'selected' : ''}`}
-                  onClick={() => setSelectedSlot(slot)}
-                >
-                  <div className="font-bold text-sm">{slot.period === 'AM' ? '☀️ Morning' : '🌤 Afternoon'}</div>
-                  <div className="text-xs text-gray-400 mt-1">{slot.label.split('  ')[1]}</div>
+                <button key={i} className={`slot-card text-center py-5 ${active ? 'selected' : ''}`} onClick={() => setSelectedSlot(slot)}>
+                  <div className="font-extrabold text-base">{slot.period === 'AM' ? 'Morning' : 'Afternoon'}</div>
+                  <div className="text-xs text-ig-muted mt-1 font-semibold">{slot.label.split('  ')[1]}</div>
                 </button>
               );
             })}
@@ -561,17 +550,13 @@ function StepSelectSlot({ job, onConfirm, onBack }) {
       )}
 
       {selectedDay && selectedSlot && (
-        <div className="p-4 rounded-xl bg-yellow-950 border border-yellow-800 mb-5 text-sm">
-          <span className="text-yellow-400 font-semibold">Selected: </span>
-          <span className="text-yellow-100">{fmt(selectedDay)}, {selectedSlot.label.split('  ')[1]}</span>
+        <div className="p-4 rounded bg-red-950 border border-ig-red mb-5 text-sm flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-ig-red flex-shrink-0"></div>
+          <span className="text-white font-semibold">{fmt(selectedDay)}, {selectedSlot.label.split('  ')[1]}</span>
         </div>
       )}
 
-      <button
-        className="btn-primary w-full"
-        disabled={!selectedDay || !selectedSlot}
-        onClick={() => onConfirm({ day: selectedDay, slot: selectedSlot })}
-      >
+      <button className="btn-primary w-full" disabled={!selectedDay || !selectedSlot} onClick={() => onConfirm({ day: selectedDay, slot: selectedSlot })}>
         Confirm this slot →
       </button>
     </div>
@@ -609,26 +594,25 @@ function StepConfirm({ job, day, slot, onDone, onBack }) {
   }
 
   return (
-    <div className="card rounded-2xl p-8 w-full max-w-md mx-auto shadow-xl">
-      <button className="text-sm text-gray-500 hover:text-gray-300 mb-4 flex items-center gap-1" onClick={onBack}>
-        ← Back
-      </button>
-      <h2 className="text-xl font-bold mb-5">Confirm your booking</h2>
+    <div className="card rounded-xl p-8 w-full max-w-md mx-auto shadow-2xl">
+      <button className="text-xs font-semibold text-ig-muted hover:text-white mb-5 flex items-center gap-1 uppercase tracking-wider" onClick={onBack}>← Back</button>
+      <div className="flex items-center gap-2 mb-6">
+        <div className="w-1 h-6 bg-ig-red rounded-full"></div>
+        <h2 className="text-xl font-bold tracking-tight">Confirm your booking</h2>
+      </div>
 
-      <dl className="space-y-3 text-sm mb-6">
+      <div className="bg-black bg-opacity-40 rounded-lg p-4 mb-6 space-y-3">
         <Row label="Address"  value={job.job_address || '—'} />
         <Row label="Job type" value={job.type || job.job_description || '—'} />
         <Row label="Date"     value={fmt(day)} />
-        <Row label="Time"     value={slot.label} />
-      </dl>
+        <Row label="Time"     value={slot.label.split('  ')[1] || slot.label} />
+      </div>
 
-      <p className="text-xs text-gray-500 mb-5">
-        By confirming, you're requesting this time slot. We'll contact you to confirm if needed.
+      <p className="text-xs text-ig-muted mb-5 leading-relaxed">
+        By confirming you are requesting this time slot. Our team will be in touch if any changes are needed.
       </p>
 
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-red-950 border border-red-800 text-red-300 text-sm">{error}</div>
-      )}
+      {error && <div className="mb-4 p-3 rounded bg-red-950 border border-red-800 text-red-300 text-sm">{error}</div>}
 
       <button className="btn-primary w-full" onClick={handleConfirm} disabled={loading}>
         {loading ? 'Saving…' : 'Confirm booking'}
@@ -639,20 +623,25 @@ function StepConfirm({ job, day, slot, onDone, onBack }) {
 
 function StepSuccess({ job, day, slot }) {
   return (
-    <div className="card rounded-2xl p-10 w-full max-w-md mx-auto shadow-xl text-center">
-      <div className="text-5xl mb-4">✓</div>
-      <h2 className="text-2xl font-bold mb-2 text-yellow-400">Booking confirmed</h2>
-      <p className="text-gray-400 text-sm mb-6">
-        Your appointment has been updated. We'll be in touch to confirm everything.
+    <div className="card rounded-xl p-10 w-full max-w-md mx-auto shadow-2xl text-center">
+      <div className="success-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" width="32" height="32">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h2 className="text-2xl font-extrabold mb-2 tracking-tight">Booking Confirmed</h2>
+      <p className="text-ig-muted text-sm mb-6 leading-relaxed">
+        Your appointment request has been submitted. Our team will be in touch to confirm.
       </p>
-      <dl className="space-y-3 text-sm text-left mb-8">
-        <Row label="Address"  value={job.job_address || '—'} />
-        <Row label="Date"     value={fmt(day)} />
-        <Row label="Time"     value={slot.label} />
-      </dl>
-      <p className="text-xs text-gray-600">
-        Need to make changes? Call us on <span className="text-gray-400">01234 567890</span>.
-      </p>
+      <div className="bg-black bg-opacity-40 rounded-lg p-4 mb-6 space-y-3 text-left">
+        <Row label="Address" value={job.job_address || '—'} />
+        <Row label="Date"    value={fmt(day)} />
+        <Row label="Time"    value={slot.label.split('  ')[1] || slot.label} />
+      </div>
+      <div className="border-t border-ig-border pt-5">
+        <p className="text-xs text-ig-muted mb-3">Need to make a change?</p>
+        <a href="tel:08081098016" className="btn-outline inline-block text-sm">Call 0808 109 8016</a>
+      </div>
     </div>
   );
 }
@@ -669,29 +658,49 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Red top bar */}
+      <div className="header-bar"></div>
+
       {/* Header */}
-      <header className="border-b border-raven-border px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-raven-accent flex items-center justify-center text-black font-bold text-sm">R</div>
-          <span className="font-bold text-base tracking-wide">Raven</span>
-          <span className="text-gray-600 text-sm hidden sm:inline">· Book your appointment</span>
+      <header className="bg-black px-6 py-4 flex items-center justify-between border-b border-ig-border">
+        <div className="logo-mark">
+          {/* Integrum flame mark */}
+          <svg width="28" height="32" viewBox="0 0 28 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 0C14 0 4 8 4 18C4 23.523 8.477 28 14 28C19.523 28 24 23.523 24 18C24 8 14 0 14 0Z" fill="#cc0000"/>
+            <path d="M14 10C14 10 9 15 9 20C9 22.761 11.239 25 14 25C16.761 25 19 22.761 19 20C19 15 14 10 14 10Z" fill="#111111"/>
+          </svg>
+          <div>
+            <div className="font-extrabold text-white text-base leading-tight tracking-wide">INTEGRUM</div>
+            <div className="text-ig-red font-bold text-xs leading-tight tracking-widest">SERVICES</div>
+          </div>
         </div>
-        <span className="text-xs text-gray-600">Powered by Integrum</span>
+        <div className="text-right hidden sm:block">
+          <div className="text-xs text-ig-muted">Raven Housing — Appointment Booking</div>
+          <a href="tel:08081098016" className="text-xs text-ig-red font-semibold hover:underline">0808 109 8016</a>
+        </div>
       </header>
 
-      {/* Progress dots */}
+      {/* Progress steps */}
       {step !== 'success' && (
-        <div className="flex items-center justify-center gap-2 py-5">
-          {['lookup','job-detail','select-slot','confirm'].map((s, i) => {
-            const stepIdx = ['lookup','select-job','job-detail','select-slot','confirm','success'];
-            const current = stepIdx.indexOf(step);
-            const me      = ['lookup','job-detail','select-slot','confirm'].indexOf(s);
-            const done    = current > stepIdx.indexOf(s);
-            const active  = step === s || (s === 'lookup' && step === 'select-job') || (s === 'job-detail' && step === 'select-job');
+        <div className="bg-black border-b border-ig-border px-6 py-3 flex items-center justify-center gap-3">
+          {[
+            { key: 'lookup',       label: 'Find job' },
+            { key: 'job-detail',   label: 'Review' },
+            { key: 'select-slot',  label: 'Choose slot' },
+            { key: 'confirm',      label: 'Confirm' },
+          ].map((s, i) => {
+            const ORDER = ['lookup','select-job','job-detail','select-slot','confirm','success'];
+            const current = ORDER.indexOf(step);
+            const mine    = ORDER.indexOf(s.key);
+            const done    = current > mine;
+            const active  = step === s.key || (s.key === 'lookup' && step === 'select-job') || (s.key === 'job-detail' && step === 'select-job');
             return (
-              <div key={s} className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full transition-colors ${done ? 'bg-yellow-400' : active ? 'bg-yellow-500' : 'bg-gray-700'}`} />
-                {i < 3 && <div className="w-6 h-px bg-gray-800" />}
+              <div key={s.key} className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className={`step-dot ${done ? 'done' : active ? 'active' : 'pending'}`} />
+                  <span className={`text-xs font-semibold hidden sm:inline ${active ? 'text-white' : done ? 'text-ig-red' : 'text-ig-muted'}`}>{s.label}</span>
+                </div>
+                {i < 3 && <div className="step-line" />}
               </div>
             );
           })}
@@ -753,8 +762,14 @@ function App() {
         )}
       </main>
 
-      <footer className="text-center text-xs text-gray-700 py-4 border-t border-raven-border">
-        Having trouble? Call us on <span className="text-gray-500">01234 567890</span> — we're happy to help.
+      <footer className="bg-black border-t border-ig-border px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-ig-red"></div>
+          <span className="text-xs text-ig-muted">© Integrum Services Ltd · integrumservices.co.uk</span>
+        </div>
+        <span className="text-xs text-ig-muted">
+          Need help? Call <a href="tel:08081098016" className="text-white font-semibold hover:text-ig-red transition-colors">0808 109 8016</a>
+        </span>
       </footer>
     </div>
   );
