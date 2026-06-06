@@ -662,21 +662,31 @@ function App() {
       <div className="header-bar"></div>
 
       {/* Header */}
-      <header className="bg-black px-6 py-4 flex items-center justify-between border-b border-ig-border">
-        <div className="logo-mark">
-          {/* Integrum flame mark */}
-          <svg width="28" height="32" viewBox="0 0 28 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M14 0C14 0 4 8 4 18C4 23.523 8.477 28 14 28C19.523 28 24 23.523 24 18C24 8 14 0 14 0Z" fill="#cc0000"/>
-            <path d="M14 10C14 10 9 15 9 20C9 22.761 11.239 25 14 25C16.761 25 19 22.761 19 20C19 15 14 10 14 10Z" fill="#111111"/>
-          </svg>
-          <div>
-            <div className="font-extrabold text-white text-base leading-tight tracking-wide">INTEGRUM</div>
-            <div className="text-ig-red font-bold text-xs leading-tight tracking-widest">SERVICES</div>
-          </div>
+      <header className="bg-black px-6 py-3 flex items-center justify-between border-b border-ig-border">
+        {/* Integrum logo */}
+        <img
+          src="https://integrumservices.co.uk/app/uploads/2020/10/Integrum-Main-Logo-Full-Colour.png"
+          alt="Integrum Services"
+          style={{height:'44px', width:'auto', objectFit:'contain'}}
+        />
+
+        {/* Centre label — hidden on mobile */}
+        <div className="hidden sm:flex flex-col items-center gap-0.5">
+          <span className="text-xs text-ig-muted font-semibold uppercase tracking-widest">Appointment Booking</span>
+          <span className="text-xs text-ig-muted">on behalf of</span>
         </div>
-        <div className="text-right hidden sm:block">
-          <div className="text-xs text-ig-muted">Raven Housing — Appointment Booking</div>
-          <a href="tel:08081098016" className="text-xs text-ig-red font-semibold hover:underline">0808 109 8016</a>
+
+        {/* Raven Housing logo */}
+        <div className="flex items-center gap-3">
+          <img
+            src="https://www.ravenht.org.uk/wp-content/themes/cis-raventheme/assets/img/A-UdCbGa_400x400.jpg"
+            alt="Raven Housing"
+            style={{height:'44px', width:'44px', objectFit:'contain', borderRadius:'6px', background:'#fff', padding:'3px'}}
+          />
+          <div className="hidden sm:block">
+            <div className="text-xs font-bold text-white leading-tight">Raven Housing</div>
+            <a href="tel:08081098016" className="text-xs text-ig-red font-semibold hover:underline">0808 109 8016</a>
+          </div>
         </div>
       </header>
 
