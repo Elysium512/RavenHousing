@@ -81,13 +81,22 @@ const PROXY_BASE = 'https://calm-fog-ef62.peter-c72.workers.dev';
 // Only show jobs belonging to this client
 const RAVEN_COMPANY_UUID = '11fa4f27-5ce1-465c-8677-2431c46bdc3b';
 
-// How many days ahead to offer as available slots
-const DAYS_AHEAD = 14;
+// How many days ahead to scan for available slots
+const DAYS_AHEAD = 21;
 
-// Working hours for slot generation (24h)
-const SLOT_START_HOUR = 8;
-const SLOT_END_HOUR   = 17;
-const SLOT_DURATION_H = 2; // 2-hour appointment windows
+// Technicians who handle Raven Housing Reactive jobs
+const RAVEN_STAFF = [
+  '895bd1c7-ca11-42c3-9d8b-2067bb75b6fb', // Tommy Marshall
+  '429779c0-d332-4981-9827-31a91cd5b07b', // Ryan Worby
+  '31f454fc-e814-4cb9-a4be-f2606b12a0fb', // Shaun Byrne
+  '19838677-915c-45f1-8cb5-2053f05e7aeb', // Micheal Holden
+  'b04e6ce4-0d08-4fa6-909a-2053f80eb4bb', // Grant Smythe
+  'fb3ee746-b5b9-4fd8-85c0-1e5b2190406b', // Lorraine F
+];
+
+// A half-day slot is available when a technician has fewer than this many
+// hours of scheduled work in that window (AM = 08:00–13:00, PM = 13:00–17:30)
+const SLOT_BUSY_THRESHOLD_H = 3.5;
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function sm8Get(path) {
@@ -157,27 +166,63 @@ function statusBadgeClass(status) {
   return 'badge-pending';
 }
 
-// Generate AM/PM slot labels for a given date
-function generateSlots(date) {
-  const slots = [];
-  for (let h = SLOT_START_HOUR; h < SLOT_END_HOUR; h += SLOT_DURATION_H) {
-    const from = `${h.toString().padStart(2,'0')}:00`;
-    const to   = `${(h + SLOT_DURATION_H).toString().padStart(2,'0')}:00`;
-    slots.push({ label: `${from} – ${to}`, start: from, end: to });
-  }
-  return slots;
-}
+// Fetch real availability from ServiceM8 diary
+// Returns: { 'YYYY-MM-DD': { am: bool, pm: bool }, ... }
+async function fetchAvailability() {
+  const today = new Date();
+  const from  = new Date(today); from.setDate(today.getDate() + 1);
+  const to    = new Date(today); to.setDate(today.getDate() + DAYS_AHEAD + 2);
 
-// Next N working days (Mon–Fri)
-function getAvailableDays(n) {
-  const days = [];
-  const d = new Date();
-  d.setDate(d.getDate() + 1); // start tomorrow
-  while (days.length < n) {
-    if (d.getDay() !== 0 && d.getDay() !== 6) days.push(new Date(d));
+  const toDateStr = d => d.toISOString().slice(0, 10);
+  const fromStr = toDateStr(from);
+  const toStr   = toDateStr(to);
+
+  const activities = await sm8Get(
+    `/jobactivity.json?%24filter=start_date+gt+%27${fromStr}%27+and+start_date+lt+%27${toStr}%27+and+active+eq+1`
+  );
+
+  // Filter to Raven staff, scheduled (not GPS-recorded) only
+  const staffSet = new Set(RAVEN_STAFF);
+  const relevant = activities.filter(a =>
+    staffSet.has(a.staff_uuid) &&
+    a.activity_was_scheduled === 1 &&
+    !a.activity_was_recorded
+  );
+
+  // For each date, track booked hours per staff per half-day
+  // AM window: 08:00–13:00 (5h), PM window: 13:00–17:30 (4.5h)
+  const byDate = {};
+  for (const a of relevant) {
+    const date  = a.start_date.slice(0, 10);
+    const staff = a.staff_uuid;
+    if (!byDate[date]) byDate[date] = {};
+    if (!byDate[date][staff]) byDate[date][staff] = { am: 0, pm: 0 };
+
+    const s = new Date(a.start_date.replace(' ', 'T'));
+    const e = new Date(a.end_date.replace(' ', 'T'));
+    const hrs = (e - s) / 3600000;
+    if (s.getHours() < 13) byDate[date][staff].am += hrs;
+    else                    byDate[date][staff].pm += hrs;
+  }
+
+  // A slot is available if at least one technician is under the busy threshold
+  const availability = {};
+  const d = new Date(from);
+  while (d <= to) {
+    if (d.getDay() !== 0 && d.getDay() !== 6) { // skip weekends
+      const key = toDateStr(d);
+      const staffDay = byDate[key] || {};
+      let amFree = false, pmFree = false;
+      for (const staffId of RAVEN_STAFF) {
+        const booked = staffDay[staffId] || { am: 0, pm: 0 };
+        if (booked.am < SLOT_BUSY_THRESHOLD_H) amFree = true;
+        if (booked.pm < SLOT_BUSY_THRESHOLD_H) pmFree = true;
+      }
+      availability[key] = { am: amFree, pm: pmFree };
+    }
     d.setDate(d.getDate() + 1);
   }
-  return days;
+  return availability;
 }
 
 function fmt(date) {
@@ -379,18 +424,37 @@ function Row({ label, value }) {
 }
 
 function StepSelectSlot({ job, onConfirm, onBack }) {
-  const days  = getAvailableDays(DAYS_AHEAD);
-  const [selectedDay,  setSelectedDay]  = useState(null);
-  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [availability,  setAvailability]  = useState(null); // null = loading
+  const [error,         setError]         = useState('');
+  const [selectedDay,   setSelectedDay]   = useState(null);
+  const [selectedSlot,  setSelectedSlot]  = useState(null);
+
+  useEffect(() => {
+    fetchAvailability()
+      .then(setAvailability)
+      .catch(e => { console.error(e); setError('Could not load available slots. Please try again.'); });
+  }, []);
+
+  const availDays = availability
+    ? Object.entries(availability)
+        .filter(([, v]) => v.am || v.pm)
+        .map(([k]) => new Date(k + 'T00:00:00'))
+        .sort((a, b) => a - b)
+    : [];
 
   function handleDayClick(day) {
     setSelectedDay(day);
     setSelectedSlot(null);
   }
 
-  function handleConfirm() {
-    if (!selectedDay || !selectedSlot) return;
-    onConfirm({ day: selectedDay, slot: selectedSlot });
+  function slotsForDay(day) {
+    if (!availability) return [];
+    const key = day.toISOString().slice(0, 10);
+    const avail = availability[key] || {};
+    const slots = [];
+    if (avail.am) slots.push({ label: 'Morning  08:00–13:00', start: '08:00', end: '13:00', period: 'AM' });
+    if (avail.pm) slots.push({ label: 'Afternoon  13:00–17:30', start: '13:00', end: '17:30', period: 'PM' });
+    return slots;
   }
 
   return (
@@ -399,40 +463,63 @@ function StepSelectSlot({ job, onConfirm, onBack }) {
         ← Back
       </button>
       <h2 className="text-xl font-bold mb-1">Choose a time slot</h2>
-      <p className="text-sm text-gray-400 mb-6">Select a day and time that works for you.</p>
+      <p className="text-sm text-gray-400 mb-6">Showing real availability from our engineers' diaries.</p>
+
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-red-950 border border-red-800 text-red-300 text-sm">{error}</div>
+      )}
+
+      {!availability && !error && (
+        <div className="flex items-center gap-3 text-gray-500 text-sm py-8 justify-center">
+          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          Checking engineer availability…
+        </div>
+      )}
 
       {/* Day picker */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6">
-        {days.map((d, i) => {
-          const active = selectedDay && d.toDateString() === selectedDay.toDateString();
-          return (
-            <button
-              key={i}
-              className={`slot-card text-center py-3 px-1 ${active ? 'selected' : ''}`}
-              onClick={() => handleDayClick(d)}
-            >
-              <div className="text-xs text-gray-500">{d.toLocaleDateString('en-GB', { weekday:'short' })}</div>
-              <div className="font-bold text-lg leading-tight">{d.getDate()}</div>
-              <div className="text-xs text-gray-400">{d.toLocaleDateString('en-GB', { month:'short' })}</div>
-            </button>
-          );
-        })}
-      </div>
+      {availDays.length > 0 && (
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6">
+          {availDays.map((d, i) => {
+            const active = selectedDay && d.toDateString() === selectedDay.toDateString();
+            return (
+              <button
+                key={i}
+                className={`slot-card text-center py-3 px-1 ${active ? 'selected' : ''}`}
+                onClick={() => handleDayClick(d)}
+              >
+                <div className="text-xs text-gray-500">{d.toLocaleDateString('en-GB', { weekday:'short' })}</div>
+                <div className="font-bold text-lg leading-tight">{d.getDate()}</div>
+                <div className="text-xs text-gray-400">{d.toLocaleDateString('en-GB', { month:'short' })}</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {availability && availDays.length === 0 && (
+        <div className="p-4 rounded-lg bg-gray-900 border border-gray-700 text-gray-400 text-sm">
+          No available slots found in the next {DAYS_AHEAD} days. Please call us to arrange an appointment.
+        </div>
+      )}
 
       {/* Slot picker */}
       {selectedDay && (
         <>
           <p className="text-sm text-gray-400 mb-3">Available slots for {fmtShort(selectedDay)}:</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-6">
-            {generateSlots(selectedDay).map((slot, i) => {
-              const active = selectedSlot && selectedSlot.label === slot.label;
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {slotsForDay(selectedDay).map((slot, i) => {
+              const active = selectedSlot && selectedSlot.period === slot.period;
               return (
                 <button
                   key={i}
-                  className={`slot-card text-center py-3 ${active ? 'selected' : ''}`}
+                  className={`slot-card text-center py-4 ${active ? 'selected' : ''}`}
                   onClick={() => setSelectedSlot(slot)}
                 >
-                  <span className="font-semibold text-sm">{slot.label}</span>
+                  <div className="font-bold text-sm">{slot.period === 'AM' ? '☀️ Morning' : '🌤 Afternoon'}</div>
+                  <div className="text-xs text-gray-400 mt-1">{slot.label.split('  ')[1]}</div>
                 </button>
               );
             })}
@@ -443,14 +530,14 @@ function StepSelectSlot({ job, onConfirm, onBack }) {
       {selectedDay && selectedSlot && (
         <div className="p-4 rounded-xl bg-yellow-950 border border-yellow-800 mb-5 text-sm">
           <span className="text-yellow-400 font-semibold">Selected: </span>
-          <span className="text-yellow-100">{fmt(selectedDay)}, {selectedSlot.label}</span>
+          <span className="text-yellow-100">{fmt(selectedDay)}, {selectedSlot.label.split('  ')[1]}</span>
         </div>
       )}
 
       <button
         className="btn-primary w-full"
         disabled={!selectedDay || !selectedSlot}
-        onClick={handleConfirm}
+        onClick={() => onConfirm({ day: selectedDay, slot: selectedSlot })}
       >
         Confirm this slot →
       </button>
