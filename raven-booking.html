@@ -121,9 +121,12 @@ const RAVEN_STAFF = [
   '895bd1c7-ca11-42c3-9d8b-2067bb75b6fb', // Tommy Marshall
 ];
 
-// A half-day slot is available when a technician has fewer than this many
-// hours of scheduled work in that window (AM = 08:00–13:00, PM = 13:00–17:30)
-const SLOT_BUSY_THRESHOLD_H = 3.5;
+// Each Raven job takes 30 minutes. A half-day slot is available when Tommy
+// has at least 30 mins free — i.e. booked < (window length − 0.5h)
+// AM window = 5h (08:00–13:00) → busy if >= 4.5h booked
+// PM window = 4.5h (13:00–17:30) → busy if >= 4.0h booked
+const AM_BUSY_THRESHOLD_H = 4.5;
+const PM_BUSY_THRESHOLD_H = 4.0;
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function sm8Get(path) {
@@ -276,8 +279,8 @@ async function fetchAvailability(jobLat, jobLng) {
 
       for (const staffId of RAVEN_STAFF) {
         const s = staffDay[staffId] || { am: 0, pm: 0, amNearby: false, pmNearby: false };
-        const amCapacity = s.am < SLOT_BUSY_THRESHOLD_H;
-        const pmCapacity = s.pm < SLOT_BUSY_THRESHOLD_H;
+        const amCapacity = s.am < AM_BUSY_THRESHOLD_H;
+        const pmCapacity = s.pm < PM_BUSY_THRESHOLD_H;
         const amNear     = !hasCoordsForJob || s.amNearby;
         const pmNear     = !hasCoordsForJob || s.pmNearby;
         if (amCapacity && amNear) amFree = true;
