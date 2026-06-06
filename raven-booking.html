@@ -210,7 +210,7 @@ function distanceMiles(lat1, lng1, lat2, lng2) {
 // Fetch real availability from ServiceM8 diary.
 // jobLat / jobLng — the customer's property coordinates.
 // Only offers a slot if a technician is already working within NEARBY_MILES that day.
-const NEARBY_MILES = 5;
+const NEARBY_MILES = 10;
 
 // Always format dates in LOCAL time to avoid BST/UTC off-by-one
 function localDateStr(d) {
